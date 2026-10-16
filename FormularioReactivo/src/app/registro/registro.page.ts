@@ -13,17 +13,22 @@ import {
   IonHeader,
   IonToolbar,
   IonTitle,
+  IonButtons,
+  IonButton,
+  IonIcon,
   IonContent,
   IonList,
   IonItem,
   IonInput,
   IonSelect,
   IonSelectOption,
-  IonButton,
   IonSpinner,
   IonToast,
   IonAlert,
 } from '@ionic/angular';
+import { addIcons } from 'ionicons';
+import { moon, sunny, downloadOutline } from 'ionicons/icons';
+import jsPDF from 'jspdf';
 
 /**
  * Validador personalizado para Código de Barras (SKU):
@@ -32,7 +37,7 @@ import {
 export function skuValidator(): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     if (!control.value) {
-      return null; // Deja que Validators.required maneje el campo vacío
+      return null;
     }
     const regex = /^[a-zA-Z0-9]{12}$/;
     return regex.test(control.value) ? null : { invalidSku: true };
@@ -46,7 +51,7 @@ export function skuValidator(): ValidatorFn {
 export function greaterThanZeroValidator(): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     if (control.value === null || control.value === undefined || control.value === '') {
-      return null; // Deja que Validators.required maneje el campo vacío
+      return null;
     }
     const val = Number(control.value);
     return !isNaN(val) && val > 0 ? null : { greaterThanZero: true };
@@ -55,17 +60,21 @@ export function greaterThanZeroValidator(): ValidatorFn {
 
 /**
  * Validador personalizado para Fecha de Nacimiento:
- * No puede ser una fecha futura.
+ * No puede ser superior al día de hoy (fecha futura no permitida).
  */
 export function fechaNacimientoValidator(): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     if (!control.value) {
-      return null; // Deja que Validators.required maneje el campo vacío
+      return null;
     }
-    const selectedDate = new Date(control.value);
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-    return selectedDate > today ? { futureDate: true } : null;
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const localToday = `${year}-${month}-${day}`;
+
+    // Comparación ISO YYYY-MM-DD
+    return control.value > localToday ? { futureDate: true } : null;
   };
 }
 
@@ -80,13 +89,15 @@ export function fechaNacimientoValidator(): ValidatorFn {
     IonHeader,
     IonToolbar,
     IonTitle,
+    IonButtons,
+    IonButton,
+    IonIcon,
     IonContent,
     IonList,
     IonItem,
     IonInput,
     IonSelect,
     IonSelectOption,
-    IonButton,
     IonSpinner,
     IonToast,
     IonAlert,
@@ -96,14 +107,30 @@ export class RegistroPage {
   // Definición del formulario reactivo fuertemente tipado
   public productoForm: FormGroup;
 
-  // Uso de Signals para gestionar el estado de envío y el feedback
+  // Signals para gestionar estado reactivo
   public isSubmitting = signal<boolean>(false);
   public showToast = signal<boolean>(false);
   public showAlert = signal<boolean>(false);
+  public isDarkMode = signal<boolean>(false);
+
   public alertButtons = ['Aceptar'];
-  public maxDate: string = new Date().toISOString().split('T')[0];
+
+  // Fecha máxima para el picker nativo (hoy)
+  public maxDate: string = (() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  })();
+
+  // Almacena los últimos datos enviados para poder descargarlos en PDF
+  public lastSubmittedData: any = null;
 
   constructor(private fb: FormBuilder) {
+    // Registrar iconos de Ionicons necesarios
+    addIcons({ moon, sunny, downloadOutline });
+
     this.productoForm = this.fb.group({
       // Código de Barras (SKU): Obligatorio, exactamente 12 caracteres alfanuméricos
       sku: ['', [Validators.required, skuValidator()]],
@@ -113,8 +140,10 @@ export class RegistroPage {
       categoria: ['', [Validators.required]],
       // Stock Mínimo: Obligatorio, valor numérico mayor que 0
       stockMinimo: ['', [Validators.required, greaterThanZeroValidator()]],
-      // Fecha de Nacimiento: Obligatoria, no futura
+      // Fecha de Nacimiento: Obligatoria, no superior a hoy
       fechaNacimiento: ['', [Validators.required, fechaNacimientoValidator()]],
+      // Contraseña: Obligatoria, mínimo 6 caracteres
+      contrasena: ['', [Validators.required, Validators.minLength(6)]],
     });
   }
 
@@ -168,9 +197,99 @@ export class RegistroPage {
       return 'La fecha de nacimiento es obligatoria.';
     }
     if (control?.hasError('futureDate')) {
-      return 'La fecha de nacimiento no puede ser futura.';
+      return 'La fecha de nacimiento no puede ser superior a hoy.';
     }
     return '';
+  }
+
+  get contrasenaError(): string {
+    const control = this.productoForm.get('contrasena');
+    if (control?.hasError('required')) {
+      return 'La contraseña es obligatoria.';
+    }
+    if (control?.hasError('minlength')) {
+      return 'La contraseña debe tener mínimo 6 caracteres.';
+    }
+    return '';
+  }
+
+  /**
+   * Conmuta el modo oscuro aplicando la clase oficial de Ionic (ion-palette-dark / dark)
+   */
+  public toggleDarkMode(): void {
+    this.isDarkMode.update((dark) => !dark);
+    const active = this.isDarkMode();
+    document.documentElement.classList.toggle('ion-palette-dark', active);
+    document.body.classList.toggle('dark', active);
+  }
+
+  /**
+   * Cifra la contraseña utilizando el estándar Web Crypto API (SHA-256)
+   * para evitar exponerla en texto plano.
+   */
+  private async cifrarContrasena(password: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  /**
+   * Genera y descarga un documento PDF con los datos del producto registrado
+   */
+  public descargarPDF(): void {
+    if (!this.lastSubmittedData) {
+      return;
+    }
+
+    const doc = new jsPDF();
+    const data = this.lastSubmittedData;
+
+    // Encabezado con estilo
+    doc.setFillColor(56, 128, 255); // Color primario Ionic
+    doc.rect(0, 0, 210, 25, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.text('COMPROBANTE DE REGISTRO DE PRODUCTO', 14, 16);
+
+    // Metadata
+    doc.setTextColor(80, 80, 80);
+    doc.setFontSize(10);
+    doc.text(`Fecha y hora de emisión: ${new Date().toLocaleString()}`, 14, 35);
+    doc.setDrawColor(200, 200, 200);
+    doc.line(14, 38, 196, 38);
+
+    // Datos del formulario
+    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(12);
+    let y = 50;
+
+    doc.text(`Código de Barras (SKU): ${data.sku}`, 14, y);
+    y += 12;
+    doc.text(`Nombre del Producto: ${data.nombre}`, 14, y);
+    y += 12;
+    doc.text(`Categoría: ${data.categoria}`, 14, y);
+    y += 12;
+    doc.text(`Stock Mínimo: ${data.stockMinimo} unidades`, 14, y);
+    y += 12;
+    doc.text(`Fecha de Nacimiento: ${data.fechaNacimiento}`, 14, y);
+    y += 12;
+    doc.text(`Contraseña (Cifrada SHA-256):`, 14, y);
+    y += 7;
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`${data.contrasena}`, 14, y);
+
+    // Pie de página
+    doc.setDrawColor(200, 200, 200);
+    doc.line(14, 270, 196, 270);
+    doc.setFontSize(9);
+    doc.setTextColor(130, 130, 130);
+    doc.text('Sistema de Gestión de Inventario Móvil - Documento generado automáticamente.', 14, 276);
+
+    // Descarga del fichero PDF
+    doc.save(`registro_producto_${data.sku || 'inventario'}.pdf`);
   }
 
   public async onSubmit(): Promise<void> {
@@ -184,8 +303,20 @@ export class RegistroPage {
     this.productoForm.disable();
 
     try {
-      const formData = this.productoForm.getRawValue();
-      console.log('Payload a enviar (Datos del Producto):', formData);
+      const rawData = this.productoForm.getRawValue();
+
+      // Cifrado de la contraseña para evitar mostrarla en consola en texto plano
+      const contrasenaCifrada = await this.cifrarContrasena(rawData.contrasena);
+
+      const payloadSeguro = {
+        ...rawData,
+        contrasena: contrasenaCifrada, // Contraseña cifrada en hash SHA-256
+      };
+
+      console.log('Payload seguro a enviar (contraseña cifrada):', payloadSeguro);
+
+      // Guardamos una copia para permitir la descarga en PDF
+      this.lastSubmittedData = { ...payloadSeguro };
 
       // Simulación de petición asíncrona de guardado (2 segundos)
       await new Promise((resolve) => setTimeout(resolve, 2000));
