@@ -220,6 +220,7 @@ export class RegistroPage {
     this.isDarkMode.update((dark) => !dark);
     const active = this.isDarkMode();
     document.documentElement.classList.toggle('ion-palette-dark', active);
+    document.body.classList.toggle('ion-palette-dark', active);
     document.body.classList.toggle('dark', active);
   }
 
