@@ -1,0 +1,102 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Gestión de Inventario Móvil</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="form-container">
+    <div class="form-header">
+      <h2>Inserción de Producto</h2>
+      <p>Complete los datos del producto para darlo de alta en el almacén.</p>
+    </div>
+
+    <!-- Enlace del FormGroup definido en TypeScript -->
+    <form [formGroup]="productoForm" (ngSubmit)="onSubmit()">
+      <ion-list lines="full">
+        <!-- Campo Código de Barras (SKU) -->
+        <ion-item>
+          <ion-input
+            label="Código de Barras (SKU)"
+            labelPlacement="floating"
+            type="text"
+            formControlName="sku"
+            [errorText]="skuError"
+            placeholder="Ej: ABC123XYZ456"
+            maxlength="12"
+            helperText="Exactamente 12 caracteres alfanuméricos">
+          </ion-input>
+        </ion-item>
+
+        <!-- Campo Nombre del Producto -->
+        <ion-item>
+          <ion-input
+            label="Nombre del Producto"
+            labelPlacement="floating"
+            type="text"
+            formControlName="nombre"
+            [errorText]="nombreError"
+            placeholder="Ej: Martillo Profesional">
+          </ion-input>
+        </ion-item>
+
+        <!-- Campo Categoría con ion-select -->
+        <ion-item>
+          <ion-select
+            label="Categoría"
+            labelPlacement="floating"
+            placeholder="Seleccione una categoría"
+            formControlName="categoria"
+            [errorText]="categoriaError">
+            <ion-select-option value="Electrónica">Electrónica</ion-select-option>
+            <ion-select-option value="Herramientas">Herramientas</ion-select-option>
+            <ion-select-option value="Consumibles">Consumibles</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <!-- Campo Stock Mínimo con teclado numérico nativo -->
+        <ion-item>
+          <ion-input
+            label="Stock Mínimo"
+            labelPlacement="floating"
+            type="number"
+            inputmode="numeric"
+            formControlName="stockMinimo"
+            [errorText]="stockMinimoError"
+            placeholder="Ej: 15"
+            min="1">
+          </ion-input>
+        </ion-item>
+
+        <!-- Campo Fecha de Nacimiento -->
+        <ion-item>
+          <ion-input
+            label="Fecha de Nacimiento"
+            labelPlacement="floating"
+            type="date"
+            formControlName="fechaNacimiento"
+            [errorText]="fechaNacimientoError"
+            [max]="maxDate">
+          </ion-input>
+        </ion-item>
+      </ion-list>
+
+      <div class="ion-padding-top">
+        <!-- Botón dinámico que responde al Signal -->
+        <ion-button expand="block" type="submit" [disabled]="productoForm.invalid || isSubmitting()">
+          <span *ngIf="!isSubmitting()">Guardar Producto</span>
+          <ion-spinner name="crescent" *ngIf="isSubmitting()"></ion-spinner>
+        </ion-button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Toast para confirmar guardado local -->
+  <ion-toast
+    [isOpen]="showToast()"
+    message="Producto guardado localmente con éxito en el inventario."
+    [duration]="3000"
+    color="success"
+    (didDismiss)="showToast.set(false)">
+  </ion-toast>
+</ion-content>
