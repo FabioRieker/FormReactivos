@@ -1,0 +1,176 @@
+<ion-header>
+  <ion-toolbar color="secondary">
+    <ion-buttons slot="start">
+      <ion-button routerLink="/registro" fill="clear">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Formulario Template-Driven</ion-title>
+    <ion-buttons slot="end">
+      <!-- Botón de Modo Oscuro -->
+      <ion-button (click)="toggleDarkMode()" fill="clear" aria-label="Cambiar modo oscuro">
+        <ion-icon slot="icon-only" [name]="isDarkMode() ? 'sunny' : 'moon'"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="form-container">
+    <div class="form-header">
+      <div class="badge-container">
+        <span class="badge-driven">Template-Driven (ngModel)</span>
+      </div>
+      <h2>Inserción de Producto (Template-Driven)</h2>
+      <p>Este formulario utiliza <strong>FormsModule</strong> y directivas <strong>[(ngModel)]</strong> en la plantilla en lugar de Reactive Forms.</p>
+    </div>
+
+    <!-- Enlace Template-Driven con #drivenForm="ngForm" -->
+    <form #drivenForm="ngForm" (ngSubmit)="onSubmit(drivenForm)" novalidate>
+      <ion-list lines="full">
+        <!-- Campo Código de Barras (SKU) -->
+        <ion-item>
+          <ion-input
+            label="Código de Barras (SKU)"
+            labelPlacement="floating"
+            type="text"
+            name="sku"
+            [(ngModel)]="producto.sku"
+            #skuCtrl="ngModel"
+            required
+            pattern="^[a-zA-Z0-9]{12}$"
+            [errorText]="skuCtrl.invalid && (skuCtrl.touched || drivenForm.submitted) ? (skuCtrl.errors?.['required'] ? 'El SKU es obligatorio.' : 'Debe tener exactamente 12 caracteres alfanuméricos.') : ''"
+            placeholder="Ej: ABC123XYZ456"
+            maxlength="12"
+            helperText="Exactamente 12 caracteres alfanuméricos">
+          </ion-input>
+        </ion-item>
+
+        <!-- Campo Nombre del Producto -->
+        <ion-item>
+          <ion-input
+            label="Nombre del Producto"
+            labelPlacement="floating"
+            type="text"
+            name="nombre"
+            [(ngModel)]="producto.nombre"
+            #nombreCtrl="ngModel"
+            required
+            [errorText]="nombreCtrl.invalid && (nombreCtrl.touched || drivenForm.submitted) ? 'El nombre del producto es obligatorio.' : ''"
+            placeholder="Ej: Sierra Circular">
+          </ion-input>
+        </ion-item>
+
+        <!-- Campo Categoría con ion-select -->
+        <ion-item>
+          <ion-select
+            label="Categoría"
+            labelPlacement="floating"
+            placeholder="Seleccione una categoría"
+            name="categoria"
+            [(ngModel)]="producto.categoria"
+            #catCtrl="ngModel"
+            required
+            [errorText]="catCtrl.invalid && (catCtrl.touched || drivenForm.submitted) ? 'Debe seleccionar una categoría.' : ''">
+            <ion-select-option value="Electrónica">Electrónica</ion-select-option>
+            <ion-select-option value="Herramientas">Herramientas</ion-select-option>
+            <ion-select-option value="Consumibles">Consumibles</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <!-- Campo Stock Mínimo -->
+        <ion-item>
+          <ion-input
+            label="Stock Mínimo"
+            labelPlacement="floating"
+            type="number"
+            inputmode="numeric"
+            name="stockMinimo"
+            [(ngModel)]="producto.stockMinimo"
+            #stockCtrl="ngModel"
+            required
+            min="1"
+            [errorText]="stockCtrl.invalid && (stockCtrl.touched || drivenForm.submitted) ? (stockCtrl.errors?.['required'] ? 'El stock mínimo es obligatorio.' : 'El stock debe ser mayor que 0.') : ''"
+            placeholder="Ej: 20">
+          </ion-input>
+        </ion-item>
+
+        <!-- Campo Fecha de Nacimiento -->
+        <ion-item>
+          <ion-input
+            label="Fecha de Nacimiento"
+            labelPlacement="floating"
+            type="date"
+            name="fechaNacimiento"
+            [(ngModel)]="producto.fechaNacimiento"
+            #fechaCtrl="ngModel"
+            required
+            [max]="maxDate"
+            [errorText]="fechaCtrl.invalid && (fechaCtrl.touched || drivenForm.submitted) ? 'La fecha de nacimiento es obligatoria y no puede ser futura.' : ''">
+          </ion-input>
+        </ion-item>
+
+        <!-- Campo Contraseña -->
+        <ion-item>
+          <ion-input
+            label="Contraseña de Operario"
+            labelPlacement="floating"
+            type="password"
+            name="contrasena"
+            [(ngModel)]="producto.contrasena"
+            #passCtrl="ngModel"
+            required
+            minlength="6"
+            [errorText]="passCtrl.invalid && (passCtrl.touched || drivenForm.submitted) ? (passCtrl.errors?.['required'] ? 'La contraseña es obligatoria.' : 'Debe tener mínimo 6 caracteres.') : ''"
+            placeholder="Mínimo 6 caracteres">
+          </ion-input>
+        </ion-item>
+      </ion-list>
+
+      <div class="ion-padding-top">
+        <!-- Botón de Envío -->
+        <ion-button expand="block" color="secondary" type="submit" [disabled]="drivenForm.invalid || isSubmitting()">
+          <span *ngIf="!isSubmitting()">Guardar Producto (Template-Driven)</span>
+          <ion-spinner name="crescent" *ngIf="isSubmitting()"></ion-spinner>
+        </ion-button>
+
+        <!-- Botón para descargar el PDF -->
+        <ion-button
+          expand="block"
+          color="tertiary"
+          fill="outline"
+          (click)="descargarPDF()"
+          [disabled]="!lastSubmittedData"
+          class="ion-margin-top">
+          <ion-icon slot="start" name="download-outline"></ion-icon>
+          Descargar PDF Comprobante (Template-Driven)
+        </ion-button>
+
+        <!-- Enlace para volver/comparar con el Formulario Reactivo -->
+        <ion-button expand="block" fill="clear" routerLink="/registro" class="ion-margin-top">
+          <ion-icon slot="start" name="swap-horizontal-outline"></ion-icon>
+          Cambiar a Formulario Reactivo (Reactive Forms)
+        </ion-button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Toast de Confirmación -->
+  <ion-toast
+    [isOpen]="showToast()"
+    message="Producto guardado correctamente mediante Template-Driven Form."
+    [duration]="3000"
+    color="secondary"
+    (didDismiss)="showToast.set(false)">
+  </ion-toast>
+
+  <!-- Alert de Confirmación -->
+  <ion-alert
+    [isOpen]="showAlert()"
+    header="Formulario Template-Driven"
+    subHeader="¡Operación Completada!"
+    message="Los datos han sido validados en la plantilla y procesados con éxito."
+    [buttons]="alertButtons"
+    (didDismiss)="showAlert.set(false)">
+  </ion-alert>
+</ion-content>

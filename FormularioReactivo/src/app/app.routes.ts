@@ -6,6 +6,10 @@ export const routes: Routes = [
     loadComponent: () => import('./registro/registro.page').then((m) => m.RegistroPage),
   },
   {
+    path: 'driven',
+    loadComponent: () => import('./driven/driven.page').then((m) => m.DrivenPage),
+  },
+  {
     path: 'home',
     redirectTo: 'registro',
     pathMatch: 'full',

@@ -26,8 +26,9 @@ import {
   IonToast,
   IonAlert,
 } from '@ionic/angular';
+import { RouterLink } from '@angular/router';
 import { addIcons } from 'ionicons';
-import { moon, sunny, downloadOutline } from 'ionicons/icons';
+import { moon, sunny, downloadOutline, swapHorizontalOutline } from 'ionicons/icons';
 import jsPDF from 'jspdf';
 
 /**
@@ -101,6 +102,7 @@ export function fechaNacimientoValidator(): ValidatorFn {
     IonSpinner,
     IonToast,
     IonAlert,
+    RouterLink,
   ],
 })
 export class RegistroPage {
@@ -129,7 +131,7 @@ export class RegistroPage {
 
   constructor(private fb: FormBuilder) {
     // Registrar iconos de Ionicons necesarios
-    addIcons({ moon, sunny, downloadOutline });
+    addIcons({ moon, sunny, downloadOutline, swapHorizontalOutline });
 
     this.productoForm = this.fb.group({
       // Código de Barras (SKU): Obligatorio, exactamente 12 caracteres alfanuméricos
