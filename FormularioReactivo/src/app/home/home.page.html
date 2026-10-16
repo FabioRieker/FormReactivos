@@ -99,4 +99,14 @@
     color="success"
     (didDismiss)="showToast.set(false)">
   </ion-toast>
+
+  <!-- Alerta informativa de confirmación -->
+  <ion-alert
+    [isOpen]="showAlert()"
+    header="Formulario Enviado"
+    subHeader="¡Operación Exitosa!"
+    message="El formulario se ha enviado correctamente y los datos han sido registrados en el inventario."
+    [buttons]="alertButtons"
+    (didDismiss)="showAlert.set(false)">
+  </ion-alert>
 </ion-content>

@@ -22,6 +22,7 @@ import {
   IonButton,
   IonSpinner,
   IonToast,
+  IonAlert,
 } from '@ionic/angular';
 
 /**
@@ -88,6 +89,7 @@ export function fechaNacimientoValidator(): ValidatorFn {
     IonButton,
     IonSpinner,
     IonToast,
+    IonAlert,
   ],
 })
 export class HomePage {
@@ -97,6 +99,8 @@ export class HomePage {
   // Uso de Signals para gestionar el estado de envío y el feedback
   public isSubmitting = signal<boolean>(false);
   public showToast = signal<boolean>(false);
+  public showAlert = signal<boolean>(false);
+  public alertButtons = ['Aceptar'];
   public maxDate: string = new Date().toISOString().split('T')[0];
 
   constructor(private fb: FormBuilder) {
@@ -191,7 +195,8 @@ export class HomePage {
       this.productoForm.markAsPristine();
       this.productoForm.markAsUntouched();
 
-      // Mostrar confirmación mediante ion-toast
+      // Mostrar confirmación mediante alert y toast
+      this.showAlert.set(true);
       this.showToast.set(true);
     } catch (error) {
       console.error('Error al persistir los datos del producto', error);
